@@ -1,0 +1,117 @@
+
+#include<stdio.h>
+#include<conio.h>
+#include<stdlib.h>
+
+struct lock* lock;
+
+struct cv* cv;
+
+int num_waiting;
+
+int num_in_game;
+
+int num_in_next;
+
+int players_per_match=3;
+
+
+
+//	Called only once before any players have arrived. void game sync init()
+
+void game_sync_init()
+{
+
+lock = lock_create("lock");
+
+cv = cv_create("cv");
+
+num_waiting = 0;
+
+num_in_game = 0;
+
+num_in_next = 0;
+
+}
+
+//	Called only once when the company takes down the system for maintenance. void game sync cleanup()
+
+void game_sync_cleanup()
+{
+
+lock_destroy(lock);
+
+cv_destroy(cv);
+}
+
+
+Question continues on the next page.
+ 
+
+//	Called once by each player, before that player starts a match
+
+//	Should block until the player's match can start (according to
+
+//	Snowflake's synchronization requirements)
+
+void before_match()
+{
+
+
+lock_acquire(lock);
+
+num_waiting++;
+}
+
+//	Should only start a new game if there are PLAYERS_PER_MATCH
+
+//	players waiting and a game is not in progress.
+
+while (num_waiting < PLAYERS_PER_MATCH || num_in_game != 0) 
+{
+ cv_wait(cv, lock);
+}
+
+num_in_next++;
+
+if (num_in_next != PLAYERS_PER_MATCH)
+{
+
+cv_signal(cv, lock); // Chain the wakeup
+
+} 
+else 
+{
+
+num_waiting -= PLAYERS_PER_MATCH;
+
+num_in_game = PLAYERS_PER_MATCH;
+
+num_in_next = 0;
+
+}
+
+lock_release(lock);
+
+
+
+
+//	Called once for each player, after that player's match is finished void after match()
+
+
+lock_acquire(lock);
+
+num_in_game--;
+
+if (num_in_game == 0 && num_waiting >= PLAYERS_PER_MATCH) 
+{
+
+//	Last player to exit. Check if it needs to wakeup
+
+//	user. Just need to wakeup one user.
+
+cv_signal(cv, lock);
+
+}
+
+lock_release(lock);
