@@ -43,11 +43,6 @@ lock_destroy(lock);
 
 cv_destroy(cv);
 }
-
-
-Question continues on the next page.
- 
-
 //	Called once by each player, before that player starts a match
 
 //	Should block until the player's match can start (according to
